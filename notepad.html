@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>دفترچه یادداشت من</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class' // ✅ فعال‌سازی دارک مود با کلاس
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Shabnam&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Shabnam', sans-serif;
+      transition: background 0.3s, color 0.3s;
+    }
+    .dark body {
+      background-color: #1e1e2f;
+      color: #fff;
+    }
+  </style>
+</head>
+<body class="min-h-screen px-4 py-10 bg-gradient-to-br from-pink-100 via-blue-100 to-purple-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex flex-col items-center">
+
+  <div class="w-full max-w-2xl bg-white/70 dark:bg-gray-800/80 backdrop-blur-md rounded-3xl shadow-xl p-6">
+    <!-- بالای صفحه -->
+    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+      <h1 class="text-3xl font-extrabold text-purple-800 dark:text-purple-200 text-center">📘 دفترچه یادداشت من</h1>
+      
+        <button onclick="toggleDarkMode()" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white px-4 py-2 rounded-xl hover:scale-105 transition">🌓</button>
+    
+    </div>
+
+    <!-- فرم یادداشت -->
+    <form id="note-form" class="space-y-4 mb-8">
+      <input type="text" id="note-title" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-400 focus:outline-none dark:bg-gray-700 dark:text-white dark:border-gray-600" placeholder="عنوان یادداشت" />
+      <textarea id="note-content" rows="4" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-400 focus:outline-none dark:bg-gray-700 dark:text-white dark:border-gray-600" placeholder="متن یادداشت"></textarea>
+      <button id="submit-button" type="submit" class="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-semibold hover:scale-105 transition shadow-md">➕ افزودن یادداشت</button>
+    </form>
+      <span class="text-2xl md:text-4xl">🔎</span>
+     <input type="text" id="search-input" placeholder="جستجوی یادداشت..." class="p-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-400 dark:bg-gray-700 dark:text-white dark:border-gray-600 mb-2" />
+  
+    <!-- لیست یادداشت‌ها -->
+    <div id="notes-list" class="space-y-4"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById("note-form");
+    const titleInput = document.getElementById("note-title");
+    const contentInput = document.getElementById("note-content");
+    const notesList = document.getElementById("notes-list");
+    const submitBtn = document.getElementById("submit-button");
+    const searchInput = document.getElementById("search-input");
+
+    let notes = [];
+    let editIndex = null;
+
+    // بارگذاری اولیه
+    window.onload = () => {
+      const saved = localStorage.getItem("notes");
+      const dark = localStorage.getItem("darkMode");
+      if (saved) notes = JSON.parse(saved);
+      if (dark === "true") document.documentElement.classList.add("dark");
+      renderNotes();
+    };
+
+    function toggleDarkMode() {
+      document.documentElement.classList.toggle("dark");
+      const isDark = document.documentElement.classList.contains("dark");
+      localStorage.setItem("darkMode", isDark);
+    }
+
+    function renderNotes() {
+      const query = searchInput.value.toLowerCase();
+      notesList.innerHTML = "";
+
+      const filtered = notes.filter(note =>
+        note.title.toLowerCase().includes(query) || note.content.toLowerCase().includes(query)
+      );
+
+      if (filtered.length === 0) {
+        notesList.innerHTML = `<p class="text-center text-gray-500 dark:text-gray-400">یادداشتی یافت نشد.</p>`;
+        return;
+      }
+
+      filtered.forEach((note, index) => {
+        const card = document.createElement("div");
+        card.className = "bg-white dark:bg-gray-700 rounded-2xl p-4 shadow-md border border-purple-200 dark:border-gray-600 hover:shadow-lg ";
+
+        card.innerHTML = `
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-xl font-bold text-purple-800 dark:text-purple-200">${note.title}</h3>
+            <div class="flex gap-2">
+              <button onclick="editNote(${index})" class="text-yellow-500 hover:text-yellow-600 font-semibold">✏️</button>
+              <button onclick="deleteNote(${index})" class="text-red-500 hover:text-red-700 font-semibold">🗑</button>
+            </div>
+          </div>
+         <p class="whitespace-pre-line text-gray-700 dark:text-gray-300 mb-2">${note.content}</p>
+          <p class="text-xs text-gray-400 dark:text-gray-400">🕓 تاریخ: ${note.date}</p>
+        `;
+
+        notesList.appendChild(card);
+      });
+    }
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const title = titleInput.value.trim();
+      const content = contentInput.value.trim();
+      if (!title || !content) return alert("لطفاً عنوان و متن را وارد کنید.");
+
+      if (editIndex !== null) {
+        notes[editIndex] = { ...notes[editIndex], title, content, date: new Date().toLocaleDateString("fa-IR") };
+        editIndex = null;
+        submitBtn.innerText = "➕ افزودن یادداشت";
+      } else {
+        notes.push({ title, content, date: new Date().toLocaleDateString("fa-IR") });
+      }
+
+      localStorage.setItem("notes", JSON.stringify(notes));
+      renderNotes();
+      form.reset();
+    });
+
+    function deleteNote(index) {
+      if (confirm("یادداشت حذف شود؟")) {
+        notes.splice(index, 1);
+        localStorage.setItem("notes", JSON.stringify(notes));
+        renderNotes();
+      }
+    }
+
+    function editNote(index) {
+      const note = notes[index];
+      titleInput.value = note.title;
+      contentInput.value = note.content;
+      editIndex = index;
+      submitBtn.innerText = "💾 ذخیره تغییرات";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    searchInput.addEventListener("input", renderNotes);
+  </script>
+</body>
+</html>
